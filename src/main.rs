@@ -1,6 +1,12 @@
-use std::thread::sleep;
-use std::time::{Duration, Instant};
-use winapi::shared::ntdef::SHORT;
+use std::{
+    mem, thread,
+    time::{Duration, Instant},
+};
+use winapi::{
+    ctypes::c_int,
+    shared::ntdef::SHORT,
+    um::winuser::{INPUT, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP},
+};
 
 #[derive(Debug, PartialEq)]
 pub enum KeyState {
@@ -56,18 +62,57 @@ pub fn get_key_state(key: i32) -> KeyState {
     }
 }
 
+pub fn send_input(key: u16, keystate: KeyState) {
+    unsafe {
+        let mut ki: KEYBDINPUT = mem::zeroed();
+        ki.wVk = key;
+
+        match keystate {
+            KeyState::DOWN => {
+                ki.dwFlags = 0;
+            }
+            KeyState::UP => {
+                ki.dwFlags = KEYEVENTF_KEYUP;
+            }
+        }
+
+        let mut input: INPUT = mem::zeroed();
+        input.type_ = INPUT_KEYBOARD;
+        *input.u.ki_mut() = ki;
+        winapi::um::winuser::SendInput(
+            1,
+            &mut input as *mut INPUT,
+            mem::size_of::<INPUT>() as c_int,
+        );
+    }
+}
+
 fn main() {
     let mut direction = Direction::LEFT;
-    let mut key_timer = Timer::new(Duration::from_millis(25));
-    let mut console_timer = Timer::new(Duration::from_millis(500));
+    let mut key_timer = Timer::new(Duration::from_millis(5));
+    let mut test_timer = Timer::new(Duration::from_millis(500));
 
     loop {
-        if key_timer.ready() {
-            println!("{}", false);
-        }
-
-        if console_timer.ready() {
-            println!("{}", true);
+        if test_timer.ready() {
+            send_input(0x20, KeyState::UP);
+            thread::sleep(Duration::from_millis(100));
+            send_input(0x20, KeyState::DOWN);
         }
     }
+    // loop {
+    //     if key_timer.ready() {
+    //         //Start Game
+    //         if get_key_state(0x47) == KeyState::DOWN {
+    //             direction = Direction::LEFT;
+    //         }
+
+    //         if get_key_state(0x41) == KeyState::DOWN {
+    //             direction = Direction::LEFT;
+    //         }
+
+    //         if get_key_state(0x44) == KeyState::DOWN {
+    //             direction = Direction::RIGHT;
+    //         }
+    //     }
+    // }
 }
