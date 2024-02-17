@@ -39,8 +39,8 @@ fn main() {
                 break;
             }
 
-            //Start Game
-            if get_key_state(0x46) == KeyState::DOWN {
+            //Start Game F || G
+            if get_key_state(0x46) == KeyState::DOWN || get_key_state(0x47) == KeyState::DOWN {
                 direction = Direction::LEFT;
                 in_game = true;
                 update_console(&direction, in_game);
