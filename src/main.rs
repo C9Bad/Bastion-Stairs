@@ -26,7 +26,7 @@ impl KeyState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Direction {
     LEFT,
     RIGHT,
@@ -87,32 +87,63 @@ pub fn send_input(key: u16, keystate: KeyState) {
     }
 }
 
+pub fn switch() {
+    send_input(0x11, KeyState::DOWN);
+    thread::sleep(Duration::from_millis(10));
+    send_input(0x11, KeyState::UP);
+}
+
+pub fn jump() {
+    send_input(0x20, KeyState::DOWN);
+    thread::sleep(Duration::from_millis(5));
+    send_input(0x20, KeyState::UP);
+}
+
+pub fn update_console(direction: &Direction, in_game: bool) {
+    print!("{}[2J", 27 as char);
+    println!("Direction = {:?}", direction);
+    println!("In_Game = {}", in_game);
+}
+
 fn main() {
     let mut direction = Direction::LEFT;
     let mut key_timer = Timer::new(Duration::from_millis(5));
-    let mut test_timer = Timer::new(Duration::from_millis(500));
+    let mut in_game = false;
+    update_console(&direction, in_game);
 
     loop {
-        if test_timer.ready() {
-            send_input(0x20, KeyState::UP);
-            thread::sleep(Duration::from_millis(100));
-            send_input(0x20, KeyState::DOWN);
+        if key_timer.ready() {
+            //Stop key - End
+            if get_key_state(0x23) == KeyState::DOWN {
+                break;
+            }
+
+            //Start Game
+            if get_key_state(0x46) == KeyState::DOWN {
+                direction = Direction::LEFT;
+                in_game = true;
+                update_console(&direction, in_game);
+            }
+
+            if get_key_state(0x41) == KeyState::DOWN {
+                if direction == Direction::LEFT {
+                    jump();
+                } else {
+                    switch();
+                    direction = Direction::LEFT;
+                    update_console(&direction, in_game);
+                }
+            }
+
+            if get_key_state(0x44) == KeyState::DOWN {
+                if direction == Direction::RIGHT {
+                    jump();
+                } else {
+                    switch();
+                    direction = Direction::RIGHT;
+                    update_console(&direction, in_game);
+                }
+            }
         }
     }
-    // loop {
-    //     if key_timer.ready() {
-    //         //Start Game
-    //         if get_key_state(0x47) == KeyState::DOWN {
-    //             direction = Direction::LEFT;
-    //         }
-
-    //         if get_key_state(0x41) == KeyState::DOWN {
-    //             direction = Direction::LEFT;
-    //         }
-
-    //         if get_key_state(0x44) == KeyState::DOWN {
-    //             direction = Direction::RIGHT;
-    //         }
-    //     }
-    // }
 }
