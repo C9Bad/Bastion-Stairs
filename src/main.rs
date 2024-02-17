@@ -1,7 +1,8 @@
-use std::mem;
+use std::thread::sleep;
+use std::time::{Duration, Instant};
 use winapi::shared::ntdef::SHORT;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum KeyState {
     UP,
     DOWN,
@@ -19,6 +20,35 @@ impl KeyState {
     }
 }
 
+#[derive(Debug)]
+pub enum Direction {
+    LEFT,
+    RIGHT,
+}
+
+struct Timer {
+    last: Instant,
+    interval: Duration,
+}
+
+impl Timer {
+    fn new(interval: Duration) -> Self {
+        Self {
+            last: Instant::now(),
+            interval,
+        }
+    }
+
+    fn ready(&mut self) -> bool {
+        if self.last.elapsed() >= self.interval {
+            self.last = Instant::now();
+            true
+        } else {
+            false
+        }
+    }
+}
+
 pub fn get_key_state(key: i32) -> KeyState {
     unsafe {
         let state = winapi::um::winuser::GetKeyState(key);
@@ -27,7 +57,17 @@ pub fn get_key_state(key: i32) -> KeyState {
 }
 
 fn main() {
-    while true {
-        println!("a - {:?}", get_key_state(0x41));
+    let mut direction = Direction::LEFT;
+    let mut key_timer = Timer::new(Duration::from_millis(25));
+    let mut console_timer = Timer::new(Duration::from_millis(500));
+
+    loop {
+        if key_timer.ready() {
+            println!("{}", false);
+        }
+
+        if console_timer.ready() {
+            println!("{}", true);
+        }
     }
 }
