@@ -1,91 +1,12 @@
-use std::{
-    mem, thread,
-    time::{Duration, Instant},
-};
-use winapi::{
-    ctypes::c_int,
-    shared::ntdef::SHORT,
-    um::winuser::{INPUT, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP},
-};
+mod input;
+mod timer;
+mod types;
 
-#[derive(Debug, PartialEq)]
-pub enum KeyState {
-    UP,
-    DOWN,
-    //TOGGLED,
-}
+use std::{thread, time::Duration};
 
-impl KeyState {
-    pub fn convert(state: SHORT) -> KeyState {
-        const HIGH_BIT_MASK: SHORT = 1 << 15;
-        if state & HIGH_BIT_MASK != 0 {
-            KeyState::DOWN
-        } else {
-            KeyState::UP
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Direction {
-    LEFT,
-    RIGHT,
-}
-
-struct Timer {
-    last: Instant,
-    interval: Duration,
-}
-
-impl Timer {
-    fn new(interval: Duration) -> Self {
-        Self {
-            last: Instant::now(),
-            interval,
-        }
-    }
-
-    fn ready(&mut self) -> bool {
-        if self.last.elapsed() >= self.interval {
-            self.last = Instant::now();
-            true
-        } else {
-            false
-        }
-    }
-}
-
-pub fn get_key_state(key: i32) -> KeyState {
-    unsafe {
-        let state = winapi::um::winuser::GetKeyState(key);
-        KeyState::convert(state)
-    }
-}
-
-pub fn send_input(key: u16, keystate: KeyState) {
-    unsafe {
-        let mut ki: KEYBDINPUT = mem::zeroed();
-        ki.wVk = key;
-
-        match keystate {
-            KeyState::DOWN => {
-                ki.dwFlags = 0;
-            }
-            KeyState::UP => {
-                ki.dwFlags = KEYEVENTF_KEYUP;
-            }
-        }
-
-        let mut input: INPUT = mem::zeroed();
-        input.type_ = INPUT_KEYBOARD;
-        *input.u.ki_mut() = ki;
-        winapi::um::winuser::SendInput(
-            1,
-            &mut input as *mut INPUT,
-            mem::size_of::<INPUT>() as c_int,
-        );
-    }
-}
+use input::{get_key_state, send_input};
+use timer::Timer;
+use types::{Direction, KeyState};
 
 pub fn switch() {
     send_input(0x11, KeyState::DOWN);
